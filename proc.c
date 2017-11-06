@@ -20,6 +20,8 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+uint rand(void);
+
 void
 pinit(void)
 {
@@ -92,6 +94,7 @@ found:
   p->retime = 0;
   p->stime = 0;
   p->rutime = 0;
+  p->reqTicks = rand() % 10 + 1;
 
   release(&ptable.lock);
 
@@ -386,6 +389,37 @@ scheduler(void)
         // It should have changed its p->state before coming back.
         c->proc = 0;
       }
+    #else
+
+    #ifdef SJF
+      struct proc *minP = 0;
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->state == RUNNABLE){
+          if (minP != 0) {
+            if(p->reqTicks < minP->reqTicks)
+              minP = p;
+          } else {
+            minP = p;
+          }
+        }
+      }
+
+      if (minP != 0) {
+        p = minP; // the process with the smallest ticks required
+
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
+    #endif
     #endif
     #endif
 
@@ -583,7 +617,7 @@ cps()
 
     // Loop over process table looking for process with pid.
   acquire(&ptable.lock);
-  cprintf("PID \t STATE \t         TIME \t NAME \n");
+  cprintf("PID \t STATE \t         CTIME \t RTICKS \t NAME \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC] && p->state != UNUSED; p++){
     cprintf("%d \t", p->pid);
 
@@ -608,10 +642,25 @@ cps()
         break;
     }
 
-    cprintf("%d \t %s  \t  \n", p->ctime, p->name );
+    cprintf("%d \t %d  \t %s \t \n", p->ctime, p->reqTicks, p->name );
   }
 
   release(&ptable.lock);
 
   return 22;
+}
+
+uint rand(void) {
+  static uint z1 = 12345, z2 = 12345, z3 = 12345, z4 = 12345;
+  uint b;
+  b  = ((z1 << 6) ^ z1) >> 13;
+  z1 = ((z1 & 4294967294U) << 18) ^ b;
+  b  = ((z2 << 2) ^ z2) >> 27;
+  z2 = ((z2 & 4294967288U) << 2) ^ b;
+  b  = ((z3 << 13) ^ z3) >> 21;
+  z3 = ((z3 & 4294967280U) << 7) ^ b;
+  b  = ((z4 << 3) ^ z4) >> 12;
+  z4 = ((z4 & 4294967168U) << 13) ^ b;
+
+  return (z1 ^ z2 ^ z3 ^ z4);
 }

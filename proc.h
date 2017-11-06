@@ -55,6 +55,7 @@ struct proc {
   int rutime;                  //process RUNNING time
   int priority;
   int tickcounter;
+  int reqTicks;
   char dum[8];
 };
 

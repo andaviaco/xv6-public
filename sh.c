@@ -153,6 +153,10 @@ main(void)
   #else
   #ifdef FCFS
     printf(1, "FCFS\n");
+  #else
+  #ifdef SJF
+    printf(1, "SJF\n");
+  #endif
   #endif
   #endif
 
