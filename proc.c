@@ -548,12 +548,32 @@ cps()
 
     // Loop over process table looking for process with pid.
   acquire(&ptable.lock);
-  cprintf("name \t pid \t state \n");
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if ( p->state == SLEEPING )
-        cprintf("%s \t %d  \t SLEEPING \n ", p->name, p->pid );
-      else if ( p->state == RUNNING )
-        cprintf("%s \t %d  \t RUNNING \n ", p->name, p->pid );
+  cprintf("PID \t STATE \t         TIME \t NAME \n");
+  for(p = ptable.proc; p < &ptable.proc[NPROC] && p->state != UNUSED; p++){
+    cprintf("%d \t", p->pid);
+
+    switch(p->state){
+      case UNUSED:
+        cprintf(" %s  \t ", "UNUSED");
+        break;
+      case EMBRYO:
+        cprintf(" %s  \t ", "EMBRYO");
+        break;
+      case SLEEPING:
+        cprintf(" %s  \t ", "SLEEPING");
+        break;
+      case RUNNABLE:
+        cprintf(" %s  \t ", "RUNNABLE");
+        break;
+      case RUNNING:
+        cprintf(" %s  \t ", "RUNNING");
+        break;
+      case ZOMBIE:
+        cprintf(" %s  \t ", "ZOMBIE");
+        break;
+    }
+
+    cprintf("%d \t %s  \t  \n", p->ctime, p->name );
   }
 
   release(&ptable.lock);
