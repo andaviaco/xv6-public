@@ -150,7 +150,12 @@ main(void)
   printf(1, "Selected scheduling policy: ");
   #ifdef RR
     printf(1, "RR\n");
+  #else
+  #ifdef FCFS
+    printf(1, "FCFS\n");
   #endif
+  #endif
+
   // Ensure that three file descriptors are open.
   while((fd = open("console", O_RDWR)) >= 0){
     if(fd >= 3){

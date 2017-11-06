@@ -334,9 +334,10 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
+    acquire(&ptable.lock);
+
     #ifdef RR
     // Loop over process table looking for process to run.
-    acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
@@ -355,7 +356,39 @@ scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+    #else
+
+    #ifdef FCFS
+      struct proc *minP = 0;
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->state == RUNNABLE){
+          if (minP != 0) {
+            if(p->ctime < minP->ctime)
+              minP = p;
+          } else {
+            minP = p;
+          }
+        }
+      }
+
+      if (minP != 0) {
+        p = minP; // the process with the smallest creation time
+
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     #endif
+    #endif
+
     release(&ptable.lock);
 
   }
