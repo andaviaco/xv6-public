@@ -334,6 +334,7 @@ scheduler(void)
     // Enable interrupts on this processor.
     sti();
 
+    #ifdef RR
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
@@ -354,6 +355,7 @@ scheduler(void)
       // It should have changed its p->state before coming back.
       c->proc = 0;
     }
+    #endif
     release(&ptable.lock);
 
   }
