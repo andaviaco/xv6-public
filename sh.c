@@ -156,6 +156,10 @@ main(void)
   #else
   #ifdef SJF
     printf(1, "SJF\n");
+  #else
+  #ifdef SP
+    printf(1, "Simple Priority\n");
+  #endif
   #endif
   #endif
   #endif

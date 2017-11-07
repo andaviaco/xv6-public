@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "spinlock.h"
 
+#define NULL 0
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -95,6 +97,7 @@ found:
   p->stime = 0;
   p->rutime = 0;
   p->reqTicks = rand() % 10 + 1;
+  p->priority = 10;
 
   release(&ptable.lock);
 
@@ -419,6 +422,36 @@ scheduler(void)
         // It should have changed its p->state before coming back.
         c->proc = 0;
       }
+    #else
+    #ifdef SP
+      struct proc *highP = NULL;
+      struct proc *p1 = NULL;
+
+      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if(p->state != RUNNABLE)
+          continue;
+
+        highP = p;
+
+        for(p1 = ptable.proc; p1 < &ptable.proc[NPROC]; p1++) {
+          if(p1->state != RUNNABLE)
+          continue;
+
+          if (highP->priority > p1->priority) {
+            highP = p1;
+          }
+        }
+
+        p = highP;
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        c->proc = 0;
+      }
+    #endif
     #endif
     #endif
     #endif
@@ -617,7 +650,13 @@ cps()
 
     // Loop over process table looking for process with pid.
   acquire(&ptable.lock);
-  cprintf("PID \t STATE \t         CTIME \t RTICKS \t NAME \n");
+  cprintf("PID \t STATE \t         CTIME \t RTICKS");
+
+  #ifdef SP
+    cprintf("\t PRIORITY");
+  #endif
+
+  cprintf("  NAME \n");
   for(p = ptable.proc; p < &ptable.proc[NPROC] && p->state != UNUSED; p++){
     cprintf("%d \t", p->pid);
 
@@ -642,12 +681,35 @@ cps()
         break;
     }
 
-    cprintf("%d \t %d  \t %s \t \n", p->ctime, p->reqTicks, p->name );
+    cprintf("%d \t %d  \t ", p->ctime, p->reqTicks);
+    #ifdef SP
+      cprintf("%d \t   ",  p->priority);
+    #endif
+    cprintf("%s \t \n", p->name);
   }
 
   release(&ptable.lock);
 
   return 22;
+}
+
+
+//change priority
+int
+chpr(int pid, int priority)
+{
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->pid == pid ) {
+        p->priority = priority;
+        break;
+    }
+  }
+  release(&ptable.lock);
+
+  return pid;
 }
 
 uint rand(void) {
